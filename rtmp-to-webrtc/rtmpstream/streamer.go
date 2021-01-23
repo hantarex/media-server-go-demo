@@ -20,8 +20,6 @@ import (
 var audio2rtp = "appsrc do-timestamp=true is-live=true  name=appsrc ! decodebin ! audioconvert ! audioresample ! opusenc ! rtpopuspay timestamp-offset=0 pt=%d ! udpsink host=127.0.0.1 port=%d"
 var video2rtp = "appsrc do-timestamp=true is-live=true  name=appsrc ! h264parse ! rtph264pay timestamp-offset=0 config-interval=-1 pt=%d ! udpsink host=127.0.0.1 port=%d"
 
-
-
 type RtmpStream struct {
 	streams        []av.CodecData
 	videoCodecData h264.CodecData

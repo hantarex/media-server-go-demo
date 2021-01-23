@@ -43,7 +43,7 @@ var Capabilities = map[string]*sdp.Capability{
 		Codecs: []string{"opus"},
 		Rtcpfbs: []*sdp.RtcpFeedback{
 			&sdp.RtcpFeedback{
-				ID:     "nack",
+				ID: "nack",
 			},
 		},
 	},
@@ -59,7 +59,7 @@ var Capabilities = map[string]*sdp.Capability{
 				Params: []string{"fir"},
 			},
 			&sdp.RtcpFeedback{
-				ID:     "nack",
+				ID: "nack",
 			},
 		},
 		Extensions: []string{
@@ -130,7 +130,6 @@ func channel(c *gin.Context) {
 }
 
 func main() {
-
 
 	server := &rtmp.Server{}
 

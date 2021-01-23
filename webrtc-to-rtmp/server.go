@@ -4,19 +4,16 @@ import "C"
 
 import (
 	"fmt"
-	"net/http"
-	"os"
-	"sync"
-
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 	mediaserver "github.com/notedit/media-server-go"
 	rtmppusher "github.com/notedit/media-server-go-demo/webrtc-to-rtmp/rtmp"
-	rtmp "github.com/notedit/rtmp-lib"
-	"github.com/notedit/rtmp-lib/av"
-	"github.com/notedit/rtmp-lib/pubsub"
 	"github.com/notedit/sdp"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 type Message struct {
@@ -65,15 +62,24 @@ var Capabilities = map[string]*sdp.Capability{
 }
 
 func channel(c *gin.Context) {
-
+	var forceQuit bool
+	sig := c.MustGet("signal").(chan os.Signal)
 	ws, err := upGrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		return
 	}
 	defer ws.Close()
 
+	go func() {
+		msg := <-sig
+		if msg == syscall.SIGPIPE {
+			forceQuit = true
+		}
+	}()
+
 	var transport *mediaserver.Transport
 	endpoint := mediaserver.NewEndpoint("127.0.0.1")
+	defer endpoint.Stop()
 
 	for {
 		// read json
@@ -101,34 +107,43 @@ func channel(c *gin.Context) {
 
 			for _, stream := range offer.GetStreams() {
 				incomingStream := transport.CreateIncomingStream(stream)
-				
+				defer incomingStream.Stop()
 
-				refresher := mediaserver.NewRefresher(5000)
-				refresher.AddStream(incomingStream)
+				//refresher := mediaserver.NewRefresher(5000)
+				//refresher.AddStream(incomingStream)
 
 				outgoingStream := transport.CreateOutgoingStream(stream.Clone())
 				outgoingStream.AttachTo(incomingStream)
 				answer.AddStream(outgoingStream.GetStreamInfo())
 
-				pusher, err := rtmppusher.NewRtmpPusher("rtmp://127.0.0.1/live/live")
+				pusher, err := rtmppusher.NewRtmpPusher("rtmp://127.0.0.1:1935/live/123456")
+				defer pusher.Stop()
 				if err != nil {
 					panic(err)
 				}
 
 				pusher.Start()
-
 				if len(incomingStream.GetVideoTracks()) > 0 {
 
 					videoTrack := incomingStream.GetVideoTracks()[0]
 
-					videoTrack.OnMediaFrame(func(frame []byte, timestamp uint) {
+					videoTrack.OnMediaFrame(func(frame []byte, timestamp uint64) {
 
 						fmt.Println("video frame ==========")
 						if len(frame) <= 4 {
 							return
 						}
-						pusher.Push(frame,false)
 
+						if forceQuit {
+							pusher.Stop()
+							transport.Stop()
+							//endpoint.Unlock()
+							endpoint.Stop()
+							//refresher.Stop()
+							return
+						}
+
+						pusher.Push(frame, false)
 					})
 				}
 
@@ -136,18 +151,41 @@ func channel(c *gin.Context) {
 
 					audioTrack := incomingStream.GetAudioTracks()[0]
 
-					audioTrack.OnMediaFrame(func(frame []byte, timestamp uint){
+					audioTrack.OnMediaFrame(func(frame []byte, timestamp uint64) {
 
 						fmt.Println("audio frame ===== ")
 						if len(frame) <= 4 {
 							return
 						}
 
-						pusher.Push(frame,true)
+						if forceQuit {
+							pusher.Stop()
+							transport.Stop()
+							//endpoint.Unlock()
+							endpoint.Stop()
+							//refresher.Stop()
+							return
+						}
+
+						pusher.Push(frame, true)
 					})
 				}
 
 			}
+			//fmt.Println(answer.String())
+			//ioutil.WriteFile("sdp.txt", []byte(answer.String()), 0644)
+			//cmd := exec.Command("ffmpeg", "-y",
+			//	"-protocol_whitelist", "file,udp,rtp",
+			//	"-i", "sdp.txt",
+			//	"-c", "copy",
+			//	"-f", "flv",
+			//	//'rtmp://localhost/live/' + streamip + '_' + streamport
+			//	"video_.flv",
+			//)
+
+			//if err := cmd.Start(); err != nil {
+			//	fmt.Println(err)
+			//}
 
 			ws.WriteJSON(Message{
 				Cmd: "answer",
@@ -157,112 +195,48 @@ func channel(c *gin.Context) {
 	}
 }
 
-
-type Channel struct {
-	que  *pubsub.Queue
-}
-
-var channels = map[string]*Channel{}
-
-func startRtmp() {
-
-	l := &sync.RWMutex{}
-
-	server := &rtmp.Server{}
-
-	server.HandlePublish = func(conn *rtmp.Conn) {
-
-
-		l.Lock()
-		ch := channels[conn.URL.Path]
-
-		if ch == nil {
-			ch = &Channel{}
-			ch.que = pubsub.NewQueue()
-			ch.que.SetMaxGopCount(1)
-			channels[conn.URL.Path] = ch
-		}
-		l.Unlock()
-
-		var err error
-
-		var streams []av.CodecData
-
-		if streams, err = conn.Streams(); err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		ch.que.WriteHeader(streams)
-
-		for {
-			packet, err := conn.ReadPacket()
-			if err != nil {
-				fmt.Println(err)
-				break
-			}
-
-			ch.que.WritePacket(packet)
-
-			fmt.Println("got rtmp packet", packet.Time)
-		}
-
-		l.Lock()
-		delete(channels, conn.URL.Path)
-		l.Unlock()
-
-		ch.que.Close()
-	}
-
-	server.HandlePlay = func(conn *rtmp.Conn) {
-
-
-		l.RLock()
-		ch := channels[conn.URL.Path]
-		l.RUnlock()
-
-		if ch != nil {
-
-			cursor := ch.que.Latest()
-
-			streams, err := cursor.Streams()
-
-			if err != nil {
-				panic(err)
-			}
-
-			conn.WriteHeader(streams)
-
-			for {
-				packet, err := cursor.ReadPacket()
-				if err != nil {
-					break
-				}
-				conn.WritePacket(packet)
-			}
-		}
-	}
-
-	server.ListenAndServe()
-}
-
 func index(c *gin.Context) {
 	fmt.Println("helloworld")
 	c.HTML(http.StatusOK, "index.html", gin.H{})
 }
 
+func SetupCloseHandler(c chan os.Signal) {
+	//signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGPIPE)
+	signal.Notify(c, syscall.SIGPIPE)
+	//go func() {
+	//	for {
+	//		select {
+	//			case msg := <-c:
+	//				if msg == syscall.SIGINT {
+	//					fmt.Println("\r- Ctrl+C pressed in Terminal")
+	//					//os.Exit(0)
+	//				}
+	//				if msg == syscall.SIGPIPE {
+	//					fmt.Println("\r- Pipe closed")
+	//				}
+	//		}
+	//	}
+	//}()
+}
+
 func main() {
+	c := make(chan os.Signal, 1)
+	fmt.Println(c)
+	SetupCloseHandler(c)
 	godotenv.Load()
 	mediaserver.EnableDebug(true)
 	mediaserver.EnableLog(true)
-	address := ":8000"
+	address := ":8001"
 	if os.Getenv("port") != "" {
 		address = ":" + os.Getenv("port")
 	}
-
-	go startRtmp()
+	//go startRtmp()
 
 	r := gin.Default()
+	r.Use(func(context *gin.Context) {
+		context.Set("signal", c)
+		context.Next()
+	})
 	r.LoadHTMLFiles("./index.html")
 	r.GET("/channel", channel)
 	r.GET("/", index)

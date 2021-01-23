@@ -38,7 +38,6 @@ func (gc *gopCache) curSnapshot() *gopCacheSnapshot {
 	return (*gopCacheSnapshot)(atomic.LoadPointer(&gc.curst))
 }
 
-
 type gopCacheReadCursor struct {
 	lastidx int
 }

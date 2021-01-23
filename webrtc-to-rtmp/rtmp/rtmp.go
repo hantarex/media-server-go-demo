@@ -6,8 +6,7 @@ import (
 	"github.com/notedit/gst"
 )
 
-const pipelinestring = "appsrc is-live=true do-timestamp=true name=videosrc ! h264parse ! video/x-h264,stream-format=(string)avc ! muxer.   appsrc is-live=true do-timestamp=true name=audiosrc ! opusparse ! opusdec ! audioconvert ! audioresample ! faac ! muxer.  flvmux name=muxer ! rtmpsink sync=false location='%s live=1'"
-
+const pipelinestring = "appsrc is-live=true do-timestamp=true name=videosrc ! h264parse ! video/x-h264,stream-format=(string)avc ! muxer.  flvmux name=muxer ! rtmpsink sync=false location='%s live=1'"
 
 type RtmpPusher struct {
 	pipeline *gst.Pipeline
@@ -15,10 +14,9 @@ type RtmpPusher struct {
 	audiosrc *gst.Element
 }
 
-
 func NewRtmpPusher(rtmpUrl string) (*RtmpPusher, error) {
 
-	err := gst.CheckPlugins([]string{"flv", "rtmp","faac"})
+	err := gst.CheckPlugins([]string{"flv", "rtmp", "faac"})
 
 	if err != nil {
 		return nil, err
@@ -50,7 +48,6 @@ func (p *RtmpPusher) Start() {
 }
 
 func (p *RtmpPusher) Stop() {
-
 	p.pipeline.SetState(gst.StateNull)
 }
 
@@ -59,10 +56,9 @@ func (p *RtmpPusher) Push(buffer []byte, audio bool) {
 	var err error
 	if audio {
 		err = p.audiosrc.PushBuffer(buffer)
-	}  else {
+	} else {
 		err = p.videosrc.PushBuffer(buffer)
 	}
-
 	if err != nil {
 		fmt.Println("push buffer error", err)
 	}

@@ -66,11 +66,11 @@
             //Play it
             removeVideoForStream(event.stream);
         };
-        socket = new WebSocket('ws://localhost:8000/channel');
+        socket = new WebSocket('ws://localhost:8001/channel');
 
         socket.onopen = async () => {
             const stream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
+                audio: false,
                 video: {width: {exact: 1280}, height: {exact: 720}}
             });
             console.debug("md::getUserMedia sucess",stream);

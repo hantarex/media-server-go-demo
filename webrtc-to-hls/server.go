@@ -128,7 +128,7 @@ func channel(c *gin.Context) {
 						}
 						appsrc.Push(frame)
 					})
-					
+
 				}
 			}
 
