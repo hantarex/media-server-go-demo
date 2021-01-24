@@ -70,16 +70,20 @@ func channel(c *gin.Context) {
 	}
 	defer ws.Close()
 
-	go func() {
-		msg := <-sig
-		if msg == syscall.SIGPIPE {
-			forceQuit = true
-		}
-	}()
-
 	var transport *mediaserver.Transport
 	endpoint := mediaserver.NewEndpoint("127.0.0.1")
 	defer endpoint.Stop()
+	defer fmt.Println("Stop!!!")
+
+	go func() {
+		for {
+			msg := <-sig
+			if msg == syscall.SIGPIPE {
+				forceQuit = true
+				ws.Close()
+			}
+		}
+	}()
 
 	for {
 		// read json
@@ -109,6 +113,7 @@ func channel(c *gin.Context) {
 				incomingStream := transport.CreateIncomingStream(stream)
 				defer incomingStream.Stop()
 
+				// Хуй знает зачем. Кипалив чтоли?
 				//refresher := mediaserver.NewRefresher(5000)
 				//refresher.AddStream(incomingStream)
 
@@ -134,15 +139,6 @@ func channel(c *gin.Context) {
 							return
 						}
 
-						if forceQuit {
-							pusher.Stop()
-							transport.Stop()
-							//endpoint.Unlock()
-							endpoint.Stop()
-							//refresher.Stop()
-							return
-						}
-
 						pusher.Push(frame, false)
 					})
 				}
@@ -158,34 +154,11 @@ func channel(c *gin.Context) {
 							return
 						}
 
-						if forceQuit {
-							pusher.Stop()
-							transport.Stop()
-							//endpoint.Unlock()
-							endpoint.Stop()
-							//refresher.Stop()
-							return
-						}
-
 						pusher.Push(frame, true)
 					})
 				}
 
 			}
-			//fmt.Println(answer.String())
-			//ioutil.WriteFile("sdp.txt", []byte(answer.String()), 0644)
-			//cmd := exec.Command("ffmpeg", "-y",
-			//	"-protocol_whitelist", "file,udp,rtp",
-			//	"-i", "sdp.txt",
-			//	"-c", "copy",
-			//	"-f", "flv",
-			//	//'rtmp://localhost/live/' + streamip + '_' + streamport
-			//	"video_.flv",
-			//)
-
-			//if err := cmd.Start(); err != nil {
-			//	fmt.Println(err)
-			//}
 
 			ws.WriteJSON(Message{
 				Cmd: "answer",
@@ -230,7 +203,6 @@ func main() {
 	if os.Getenv("port") != "" {
 		address = ":" + os.Getenv("port")
 	}
-	//go startRtmp()
 
 	r := gin.Default()
 	r.Use(func(context *gin.Context) {
