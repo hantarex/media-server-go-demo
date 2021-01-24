@@ -19,6 +19,7 @@ import (
 type Message struct {
 	Cmd string `json:"cmd,omitempty"`
 	Sdp string `json:"sdp,omitempty"`
+	Key string `json:"key,omitempty"`
 }
 
 var upGrader = websocket.Upgrader{
@@ -121,7 +122,7 @@ func channel(c *gin.Context) {
 				outgoingStream.AttachTo(incomingStream)
 				answer.AddStream(outgoingStream.GetStreamInfo())
 
-				pusher, err := rtmppusher.NewRtmpPusher("rtmp://127.0.0.1:1935/live/123456")
+				pusher, err := rtmppusher.NewRtmpPusher("rtmp://127.0.0.1:1935/" + msg.Key)
 				defer pusher.Stop()
 				if err != nil {
 					panic(err)
@@ -209,8 +210,8 @@ func main() {
 		context.Set("signal", c)
 		context.Next()
 	})
-	r.LoadHTMLFiles("./index.html")
+	//r.LoadHTMLFiles("./index.html")
 	r.GET("/channel", channel)
-	r.GET("/", index)
+	//r.GET("/", index)
 	r.Run(address)
 }
