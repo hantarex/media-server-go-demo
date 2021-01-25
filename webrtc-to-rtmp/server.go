@@ -109,6 +109,8 @@ func channel(c *gin.Context) {
 				Capabilities)
 
 			transport.SetLocalProperties(answer.GetMedia("audio"), answer.GetMedia("video"))
+			transport.SetBandwidthProbing(true)
+			transport.SetMaxProbingBitrate(5000)
 
 			for _, stream := range offer.GetStreams() {
 				incomingStream := transport.CreateIncomingStream(stream)
