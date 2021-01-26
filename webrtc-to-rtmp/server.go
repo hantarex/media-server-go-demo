@@ -120,8 +120,8 @@ func channel(c *gin.Context) {
 				defer incomingStream.Stop()
 
 				// Хуй знает зачем. Кипалив чтоли?
-				//refresher := mediaserver.NewRefresher(5000)
-				//refresher.AddStream(incomingStream)
+				refresher := mediaserver.NewRefresher(5000)
+				refresher.AddStream(incomingStream)
 
 				outgoingStream := transport.CreateOutgoingStream(stream.Clone())
 				outgoingStream.AttachTo(incomingStream)
