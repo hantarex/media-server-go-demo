@@ -215,8 +215,8 @@ func main() {
 		context.Set("signal", c)
 		context.Next()
 	})
-	r.LoadHTMLFiles("./index.html")
+	//r.LoadHTMLFiles("./index.html")
 	r.GET("/magicmirror", channel)
-	r.GET("/", index)
+	//r.GET("/", index)
 	r.Run(address)
 }
