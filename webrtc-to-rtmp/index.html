@@ -89,7 +89,7 @@
             console.log("offer ==== ",offer.sdp);
             socket.send(JSON.stringify({
                 id: 'start',
-				sdpAnswer: offer.sdp
+				sdpOffer: offer.sdp
             }));
         };
 

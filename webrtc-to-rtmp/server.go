@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 type Message struct {
@@ -69,6 +70,8 @@ func channel(c *gin.Context) {
 	var forceQuit bool
 	sig := c.MustGet("signal").(chan os.Signal)
 	ws, err := upGrader.Upgrade(c.Writer, c.Request, nil)
+	ticker := time.NewTicker(time.Second * 30)
+	defer ticker.Stop()
 	if err != nil {
 		return
 	}
@@ -84,6 +87,15 @@ func channel(c *gin.Context) {
 			msg := <-sig
 			if msg == syscall.SIGPIPE {
 				forceQuit = true
+				ws.Close()
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			<-ticker.C
+			if err := ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 				ws.Close()
 			}
 		}
@@ -120,8 +132,8 @@ func channel(c *gin.Context) {
 				defer incomingStream.Stop()
 
 				// Хуй знает зачем. Кипалив чтоли?
-				refresher := mediaserver.NewRefresher(5000)
-				refresher.AddStream(incomingStream)
+				//refresher := mediaserver.NewRefresher(5000)
+				//refresher.AddStream(incomingStream)
 
 				outgoingStream := transport.CreateOutgoingStream(stream.Clone())
 				outgoingStream.AttachTo(incomingStream)
