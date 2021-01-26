@@ -18,6 +18,7 @@ import (
 
 type Message struct {
 	SdpAnswer string `json:"sdpAnswer,omitempty"`
+	SdpOffer  string `json:"sdpOffer,omitempty"`
 	Id        string `json:"id,omitempty"`
 	Key       string `json:"key,omitempty"`
 }
@@ -98,7 +99,7 @@ func channel(c *gin.Context) {
 		}
 
 		if msg.Id == "start" {
-			offer, err := sdp.Parse(msg.SdpAnswer)
+			offer, err := sdp.Parse(msg.SdpOffer)
 			if err != nil {
 				panic(err)
 			}
