@@ -6,7 +6,8 @@ import (
 	"github.com/notedit/gst"
 )
 
-const pipelinestring = "appsrc is-live=true do-timestamp=true name=videosrc ! h264parse ! video/x-h264,stream-format=(string)avc ! muxer.  flvmux name=muxer ! rtmpsink sync=false location='%s live=1'"
+//const pipelinestring = "appsrc is-live=true do-timestamp=true name=videosrc ! h264parse ! video/x-h264,stream-format=(string)avc ! muxer.  flvmux name=muxer ! rtmpsink sync=false location='%s live=1'"
+const pipelinestring = "appsrc is-live=true do-timestamp=true name=videosrc ! h264parse ! video/x-h264,stream-format=(string)avc ! muxer.  flvmux name=muxer ! filesink location=video.flv"
 
 type RtmpPusher struct {
 	pipeline *gst.Pipeline
@@ -22,9 +23,9 @@ func NewRtmpPusher(rtmpUrl string) (*RtmpPusher, error) {
 		return nil, err
 	}
 
-	pipelineStr := fmt.Sprintf(pipelinestring, rtmpUrl)
+	//pipelineStr := fmt.Sprintf(pipelinestring, rtmpUrl)
 
-	pipeline, err := gst.ParseLaunch(pipelineStr)
+	pipeline, err := gst.ParseLaunch(pipelinestring)
 
 	if err != nil {
 		return nil, err

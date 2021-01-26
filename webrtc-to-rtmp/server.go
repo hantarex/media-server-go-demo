@@ -17,10 +17,12 @@ import (
 )
 
 type Message struct {
-	Cmd string `json:"cmd,omitempty"`
-	Sdp string `json:"sdp,omitempty"`
-	Key string `json:"key,omitempty"`
+	SdpAnswer string `json:"sdpAnswer,omitempty"`
+	Id        string `json:"id,omitempty"`
+	Key       string `json:"key,omitempty"`
 }
+
+const RtmpServer = "rtmp://127.0.0.1/live/"
 
 var upGrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -95,8 +97,8 @@ func channel(c *gin.Context) {
 			break
 		}
 
-		if msg.Cmd == "offer" {
-			offer, err := sdp.Parse(msg.Sdp)
+		if msg.Id == "start" {
+			offer, err := sdp.Parse(msg.SdpAnswer)
 			if err != nil {
 				panic(err)
 			}
@@ -124,7 +126,7 @@ func channel(c *gin.Context) {
 				outgoingStream.AttachTo(incomingStream)
 				answer.AddStream(outgoingStream.GetStreamInfo())
 
-				pusher, err := rtmppusher.NewRtmpPusher("rtmp://127.0.0.1:1935/" + msg.Key)
+				pusher, err := rtmppusher.NewRtmpPusher(RtmpServer + msg.Key)
 				defer pusher.Stop()
 				if err != nil {
 					panic(err)
@@ -164,8 +166,8 @@ func channel(c *gin.Context) {
 			}
 
 			ws.WriteJSON(Message{
-				Cmd: "answer",
-				Sdp: answer.String(),
+				Id:        "startResponse",
+				SdpAnswer: answer.String(),
 			})
 		}
 	}
@@ -202,7 +204,7 @@ func main() {
 	godotenv.Load()
 	mediaserver.EnableDebug(true)
 	mediaserver.EnableLog(true)
-	address := ":8001"
+	address := ":8443"
 	if os.Getenv("port") != "" {
 		address = ":" + os.Getenv("port")
 	}
@@ -212,8 +214,8 @@ func main() {
 		context.Set("signal", c)
 		context.Next()
 	})
-	//r.LoadHTMLFiles("./index.html")
-	r.GET("/channel", channel)
-	//r.GET("/", index)
+	r.LoadHTMLFiles("./index.html")
+	r.GET("/magicmirror", channel)
+	r.GET("/", index)
 	r.Run(address)
 }
