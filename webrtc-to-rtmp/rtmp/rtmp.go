@@ -8,7 +8,9 @@ import (
 
 //const pipelinestring = "appsrc is-live=true do-timestamp=true name=videosrc ! h264parse ! video/x-h264,stream-format=(string)avc ! muxer.  flvmux name=muxer ! rtmpsink sync=false location='%s live=1'"
 //const pipelinestring = "appsrc is-live=true do-timestamp=true name=videosrc ! h264parse ! video/x-h264,stream-format=(string)avc ! muxer.   appsrc is-live=true do-timestamp=true name=audiosrc ! opusparse ! opusdec ! audioconvert ! audioresample ! faac ! muxer.  flvmux name=muxer ! filesink location=video.flv"
-const pipelinestring = "appsrc is-live=true do-timestamp=true name=videosrc ! h264parse ! video/x-h264,stream-format=(string)avc ! muxer.   appsrc is-live=true do-timestamp=true name=audiosrc ! opusparse ! opusdec ! audioconvert ! audioresample ! faac ! muxer.  flvmux name=muxer ! rtmpsink sync=false location='%s live=1'"
+const pipelinestring = "appsrc is-live=true do-timestamp=true name=videosrc  ! h264parse ! video/x-h264,stream-format=(string)avc ! muxer.   appsrc is-live=true do-timestamp=true name=audiosrc ! opusparse ! opusdec ! audioconvert ! audioresample ! faac ! muxer.  flvmux name=muxer ! rtmpsink sync=false location='%s live=1'"
+
+//const pipelinestring = "appsrc is-live=true do-timestamp=true name=videosrc ! h264parse ! avdec_h264 ! videoconvert ! videoscale ! video/x-raw,width=1280 ! x264enc ! video/x-h264, stream-format=(string)avc ! muxer.   appsrc is-live=true do-timestamp=true name=audiosrc ! opusparse ! opusdec ! audioconvert ! audioresample ! faac ! muxer.  flvmux name=muxer ! rtmpsink sync=false location='%s live=1'"
 
 type RtmpPusher struct {
 	pipeline *gst.Pipeline
