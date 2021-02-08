@@ -122,7 +122,7 @@ func channel(c *gin.Context) {
 				transport.GetLocalDTLSInfo(),
 				endpoint.GetLocalCandidates(),
 				Capabilities)
-			answer.GetVideoMedia().SetBitrate(10000)
+			//answer.GetVideoMedia().SetBitrate(20000)
 			answer.GetVideoMedia().SetDirection(sdp.RECVONLY)
 			transport.SetLocalProperties(answer.GetMedia("audio"), answer.GetMedia("video"))
 
